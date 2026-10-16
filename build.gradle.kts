@@ -62,7 +62,7 @@ val coreCommitCount = providers.of(GitCommitCountValueSource::class) {
     parameters.fallback.set(3111)
 }.get()
 
-val defaultManagerPackageName by extra("com.nvwashi.patch")
+val defaultManagerPackageName by extra("top.nkbe.npatch")
 val apiCode by extra(102)
 val verCode by extra(commitCount)
 val verName by extra("1.0.8")
