@@ -38,10 +38,7 @@ android {
         val managerSignatureAllowlist = (
             System.getenv("NPATCH_MANAGER_SIGNATURE_SHA256")
                 ?: project.findProperty("npatchManagerSignatureSha256")?.toString()
-                ?: listOf(
-                    "DB73788534AFFC4BFA3AE16040A2D3A2",
-                    "C2B63EDEA1E07F3A1CF9AFF4DD0995A8",
-                ).joinToString("")
+                ?: ""
             )
             .split(',', ';', ' ', '\n', '\r', '\t')
             .map { it.trim().uppercase(Locale.ROOT) }
