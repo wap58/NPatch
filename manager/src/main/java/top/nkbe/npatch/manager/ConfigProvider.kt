@@ -12,7 +12,7 @@ import top.nkbe.npatch.config.ConfigManager
 class ConfigProvider : ContentProvider() {
 
     companion object {
-        const val AUTHORITY = "top.nkbe.npatch.manager.provider.config"
+        const val AUTHORITY = "com.nvwashi.patch.manager.provider.config"
         const val TAG = "ConfigProvider"
     }
 

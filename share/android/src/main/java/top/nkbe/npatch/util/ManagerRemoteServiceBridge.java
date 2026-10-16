@@ -11,7 +11,7 @@ import org.matrix.vector.ipc.IModuleService;
  * Internal bridge used by a scoped target to obtain the Manager-backed read-only remote service.
  */
 public final class ManagerRemoteServiceBridge {
-    private static final String AUTHORITY = "top.nkbe.npatch.remote";
+    private static final String AUTHORITY = "com.nvwashi.patch.remote";
     private static final String METHOD_GET_INJECTED_SERVICE = "getInjectedRemoteService";
     private static final String KEY_MODULE_PACKAGE = "modulePackageName";
     private static final String KEY_BINDER = "binder";

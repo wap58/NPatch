@@ -342,7 +342,7 @@ public class RemoteApplicationService implements IFrameworkService {
             // If local cache had no modules, try querying ConfigProvider directly
             if (legacyTarget.isEmpty() && modernTarget.isEmpty() && pm != null) {
                 try {
-                    Uri queryUri = Uri.parse("content://top.nkbe.npatch.manager.provider.config/config")
+                    Uri queryUri = Uri.parse("content://com.nvwashi.patch.manager.provider.config/config")
                             .buildUpon()
                             .appendQueryParameter("package", context.getPackageName())
                             .build();

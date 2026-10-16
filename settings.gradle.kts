@@ -48,11 +48,7 @@ includeBuild("core") {
     }
 }
 
+val neoApkLocal = file("external/NeoApk")
 val neoApkDir = file("../NeoApk")
-if (neoApkDir.exists()) {
-    includeBuild(neoApkDir) {
-        dependencySubstitution {
-            substitute(module("top.nkbe:NeoApk")).using(project(":"))
-        }
-    }
-}
+if (neoApkLocal.exists()) { includeBuild(neoApkLocal) { dependencySubstitution { substitute(module("top.nkbe:NeoApk")).using(project(":")) } } }
+else if (neoApkDir.exists()) { includeBuild(neoApkDir) { dependencySubstitution { substitute(module("top.nkbe:NeoApk")).using(project(":")) } } }

@@ -17,6 +17,11 @@ jobs:
       CCACHE_BASEDIR: '${{ github.workspace }}'
 
     steps:
+    - name: 重寫 libxposed 子模組 URL
+      run: |
+        git config --global url."https://github.com/JingMatrix/libxposed-api.git".insteadOf "https://github.com/libxposed/api.git"
+        git config --global url."https://github.com/JingMatrix/libxposed-service.git".insteadOf "https://github.com/libxposed/service.git"
+
     - name: 檢出程式碼
       uses: actions/checkout@v5
       with:
@@ -53,7 +58,7 @@ jobs:
       uses: gradle/actions/setup-gradle@v5
 
     - name: 設定 Android SDK
-      uses: android-actions/setup-android@v3
+      uses: android-actions/setup-android@v4.0.4
 
     - name: 設定 ninja
       uses: seanmiddleditch/gha-setup-ninja@master
