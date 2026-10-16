@@ -111,7 +111,7 @@
 
         <provider
             android:name=".manager.RemoteApiProvider"
-            android:authorities="${applicationId}.remote"
+            android:authorities="top.nkbe.npatch.remote"
             android:enabled="true"
             android:exported="true" />
 

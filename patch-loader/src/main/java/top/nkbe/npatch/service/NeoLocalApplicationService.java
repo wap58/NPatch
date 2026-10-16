@@ -33,7 +33,7 @@ import java.util.concurrent.TimeoutException;
 
 public class NeoLocalApplicationService extends IFrameworkService.Stub {
     private static final String TAG = "NPatch";
-    private static final String AUTHORITY = "com.nvwashi.patch.manager.provider.config";
+    private static final String AUTHORITY = "top.nkbe.npatch.manager.provider.config";
     private static final Uri PROVIDER_URI = Uri.parse("content://" + AUTHORITY + "/config");
     private static final long PROVIDER_TIMEOUT_SECONDS = 3;
 
