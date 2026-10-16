@@ -21,7 +21,7 @@ object Configs {
         return if (File(lspApp.filesDir, "keystore.bks").exists()) {
             KeystorePreset.CUSTOM
         } else {
-            KeystorePreset.NPATCH
+            KeystorePreset.NVWASHI
         }
     }
 

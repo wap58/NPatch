@@ -8,6 +8,8 @@ import java.io.File
 enum class KeystorePreset(val prefValue: String) {
     NPATCH("npatch"),
     FPA("fpa"),
+    NVWASHI("nvwashi"),
+    ATOM("atom"),
     CUSTOM("custom");
 
     companion object {
@@ -48,6 +50,22 @@ object MyKeyStore {
         Configs.keyStoreAlias = "app"
         Configs.keyStoreAliasPassword = "12345678"
         Configs.keyStorePreset = KeystorePreset.FPA
+    }
+
+    suspend fun setBuiltinNvwashi() {
+        installBuiltin("nvwashi.key")
+        Configs.keyStorePassword = "123456"
+        Configs.keyStoreAlias = "key0"
+        Configs.keyStoreAliasPassword = "123456"
+        Configs.keyStorePreset = KeystorePreset.NVWASHI
+    }
+
+    suspend fun setBuiltinAtom() {
+        installBuiltin("atom.key")
+        Configs.keyStorePassword = "123456"
+        Configs.keyStoreAlias = "key0"
+        Configs.keyStoreAliasPassword = "123456"
+        Configs.keyStorePreset = KeystorePreset.ATOM
     }
 
     suspend fun setCustom(password: String, alias: String, aliasPassword: String) {

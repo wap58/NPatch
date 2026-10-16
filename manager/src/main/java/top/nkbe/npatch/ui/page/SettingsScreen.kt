@@ -860,6 +860,8 @@ private fun KeyStore() {
     val currentPreset = Configs.keyStorePreset
 
     val keyStoreItems = listOf(
+        "女娲石",
+        "原子",
         "NPatch",
         "FPA",
         stringResource(R.string.settings_keystore_custom)
@@ -878,12 +880,12 @@ private fun KeyStore() {
         },
         onSelectedIndexChange = { index ->
             selectedIndex = index
-            if (index == 0) {
-                scope.launch { MyKeyStore.reset() }
-            } else if (index == 1) {
-                scope.launch { MyKeyStore.setBuiltinFpa() }
-            } else {
-                showDialog.value = true
+            when (index) {
+                0 -> scope.launch { MyKeyStore.setBuiltinNvwashi() }
+                1 -> scope.launch { MyKeyStore.setBuiltinAtom() }
+                2 -> scope.launch { MyKeyStore.reset() }
+                3 -> scope.launch { MyKeyStore.setBuiltinFpa() }
+                else -> showDialog.value = true
             }
         }
     )
@@ -1037,9 +1039,11 @@ private fun KeyStore() {
 
 private fun keyStorePresetIndex(preset: KeystorePreset): Int {
     return when (preset) {
-        KeystorePreset.NPATCH -> 0
-        KeystorePreset.FPA -> 1
-        KeystorePreset.CUSTOM -> 2
+        KeystorePreset.NVWASHI -> 0
+        KeystorePreset.ATOM -> 1
+        KeystorePreset.NPATCH -> 2
+        KeystorePreset.FPA -> 3
+        KeystorePreset.CUSTOM -> 4
     }
 }
 
