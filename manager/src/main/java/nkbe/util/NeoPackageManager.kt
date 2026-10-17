@@ -750,6 +750,13 @@ object NeoPackageManager {
                     "assets/npatch/origin.apk",
                     "assets/lspatch/origin.apk"
                 )
+                PatchedType.ATOM -> listOf(
+                    "mo/o.apk",
+                    "assets/origin.apk",
+                    "assets/npatch/origin.apk",
+                    "assets/lspatch/origin.apk",
+                    "fpa/source.apk"
+                )
                 PatchedType.EMBEDDED, PatchedType.NONE -> listOf(
                     "assets/origin.apk",
                     "assets/npatch/origin.apk",
