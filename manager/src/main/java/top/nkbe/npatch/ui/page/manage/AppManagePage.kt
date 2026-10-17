@@ -726,21 +726,12 @@ private fun lspatchScopeFile(appPackageName: String, userId: Int): java.io.File 
  * 判断依据：/data/user/<uid>/<pkg> 或 /storage/emulated/<uid>/Android/media 无法直接读，
  * 这里用「作用域文件所在父目录可写/存在」或 PackageManager 多用户查询兜底。
  */
-private fun findCloneUserId(packageName: String): Int? = runCatching {
-    // 1) 尝试常见分身 userId（MIUI/ColorOS 等常见 999，其次 10、11）
-    val candidates = listOf(999, 10, 11, 12)
-    for (uid in candidates) {
-        val mediaDir = java.io.File("/storage/emulated/$uid/Android/media/$packageName")
-        if (mediaDir.exists()) return uid
-        // 有些系统分身没有 media 目录，但已安装；用 pm 查（可能无权限）
-        val ctx = lspApp
-        @Suppress("DiscouragedPrivateApi")
-        val pm = ctx.packageManager
-        val info = runCatching {
-            val m = pm.javaClass.getMethod("getPackageInfoAsUser", String::class.java, Int::class.java, Int::class.java)
-            m.invoke(pm, packageName, 0, uid)
-        }.getOrNull()
-        if (info != null) return uid
-    }
-    null
-}.getOrNull()
+private fun findCloneUserId(packageName: String): Int? {
+    return try {
+        for (uid in listOf(999, 10, 11, 12)) {
+            val dir = java.io.File("/storage/emulated/$uid/Android/media/$packageName")
+            if (dir.exists()) return uid
+        }
+        null
+    } catch (_: Throwable) { null }
+}
