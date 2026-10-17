@@ -418,6 +418,26 @@ fun AppManageBody(
                                     }
                                 })
                             }
+                            // 分身作用域（系统分身 = 用户 999）
+                            actions.add("设置分身作用域" to {
+                                viewModel.viewModelScope.launch {
+                                    val scopeUserId = 999
+                                    val atomScope = withContext(Dispatchers.IO) { readLspatchScope(appInfo.app.packageName, scopeUserId) }
+                                    val sel = NeoPackageManager.appList.mapNotNull {
+                                        if (atomScope.contains(it.app.packageName)) it.app.packageName else null
+                                    }
+                                    val r = navigator.navigateForResult<SelectAppsResult>(
+                                        Route.SelectApps(true, sel)
+                                    )
+                                    if (r is SelectAppsResult.MultipleApps) {
+                                        withContext(Dispatchers.IO) {
+                                            writeLspatchScope(appInfo.app.packageName, r.selected.map { it.app.packageName }.toSet(), scopeUserId)
+                                        }
+                                        moduleManageViewModel.refreshScopedActivationState()
+                                        Toast.makeText(context, "分身作用域已保存（用户 $scopeUserId），重启分身应用生效", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            })
                             actions.add(stringResource(R.string.manage_export_diagnostics) to {
                                 scope.launch {
                                     runCatching {
@@ -643,11 +663,8 @@ fun AppManageFab(
  * 路径: /storage/emulated/0/Android/media/<包名>/lspatch_scope.json
  * 格式: {"modules": ["模块包名1", "模块包名2"]}
  */
-private fun readLspatchScope(appPackageName: String): Set<String> = runCatching {
-    val f = java.io.File(
-        android.os.Environment.getExternalStorageDirectory(),
-        "Android/media/$appPackageName/lspatch_scope.json"
-    )
+private fun readLspatchScope(appPackageName: String, userId: Int = 0): Set<String> = runCatching {
+    val f = lspatchScopeFile(appPackageName, userId)
     if (!f.isFile) return@runCatching emptySet<String>()
     val text = f.readText()
     val arr = org.json.JSONObject(text).optJSONArray("modules") ?: return@runCatching emptySet<String>()
@@ -657,11 +674,8 @@ private fun readLspatchScope(appPackageName: String): Set<String> = runCatching 
 /**
  * 写入原子/LSPatch 系框架的作用域配置
  */
-private fun writeLspatchScope(appPackageName: String, modules: Set<String>): Boolean = runCatching {
-    val dir = java.io.File(
-        android.os.Environment.getExternalStorageDirectory(),
-        "Android/media/$appPackageName"
-    )
+private fun writeLspatchScope(appPackageName: String, modules: Set<String>, userId: Int = 0): Boolean = runCatching {
+    val dir = lspatchScopeFile(appPackageName, userId).parentFile!!
     if (!dir.exists()) dir.mkdirs()
     val f = java.io.File(dir, "lspatch_scope.json")
     val obj = org.json.JSONObject()
@@ -671,3 +685,17 @@ private fun writeLspatchScope(appPackageName: String, modules: Set<String>): Boo
     f.writeText(obj.toString())
     true
 }.getOrDefault(false)
+
+/**
+ * 构造 lspatch_scope.json 路径，支持系统分身（多用户）
+ * userId=0 → /storage/emulated/0/Android/media/<pkg>/lspatch_scope.json
+ * userId=999 → /storage/emulated/999/Android/media/<pkg>/lspatch_scope.json
+ */
+private fun lspatchScopeFile(appPackageName: String, userId: Int): java.io.File {
+    val base = if (userId == 0) {
+        android.os.Environment.getExternalStorageDirectory()
+    } else {
+        java.io.File("/storage/emulated/$userId")
+    }
+    return java.io.File(base, "Android/media/$appPackageName/lspatch_scope.json")
+}
