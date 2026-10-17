@@ -1,25 +1,13 @@
 package org.lsposed.manager.ui.compose.repository
 
-import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.*
+import androidx.compose.material3.Switch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.Dispatchers
@@ -28,16 +16,31 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
-import org.json.JSONObject
 import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.page.Navigator
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.basic.ScrollBehavior
+import io.github.suqi8.coui.kmp.basic.Card
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.basic.InputField
+import io.github.suqi8.coui.kmp.theme.COUITheme
 import java.util.concurrent.TimeUnit
 
 private const val SEARCH_URL = "https://modules.lsposed.org/search.json"
+
+/** 免root框架无法修改系统，过滤掉明显作用于系统/框架的模块 */
+private val SYSTEM_KEYWORDS = listOf(
+    "systemui", "system ui", "状态栏", "导航栏", "status bar", "navigation bar",
+    "framework", "系统框架", "系统界面", "开机动画", "boot animation",
+    "android system", "系统设置", "settings provider", "launcher", "桌面启动器",
+    "system_server", "core patch", "系统级"
+)
+
+private fun isSystemLevel(m: RepoModule): Boolean {
+    val hay = (m.description + " " + m.summary).lowercase()
+    return SYSTEM_KEYWORDS.any { hay.contains(it.lowercase()) }
+}
 
 data class RepoModule(
     val pkg: String,
@@ -61,12 +64,16 @@ private suspend fun fetchModules(): List<RepoModule> = withContext(Dispatchers.I
         buildList {
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
+                val authorsArr = o.optJSONArray("authors")
+                val authorStr = if (authorsArr != null) {
+                    (0 until authorsArr.length()).joinToString(", ") { authorsArr.optString(it) }
+                } else ""
                 add(
                     RepoModule(
                         pkg = o.optString("name"),
                         description = o.optString("description"),
                         summary = o.optString("summary"),
-                        authors = o.optJSONArray("authors")?.joinToString(", ") ?: ""
+                        authors = authorStr
                     )
                 )
             }
@@ -77,7 +84,7 @@ private suspend fun fetchModules(): List<RepoModule> = withContext(Dispatchers.I
 @Composable
 fun RepositoryScreen(navigator: Navigator) {
     val hazeState = rememberHazeState()
-    val scrollBehavior = MiuixScrollBehavior()
+    val scrollBehavior = ScrollBehavior()
     val scope = rememberCoroutineScope()
     var list by remember { mutableStateOf<List<RepoModule>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -93,12 +100,16 @@ fun RepositoryScreen(navigator: Navigator) {
         loading = false
     }
 
-    val filtered = remember(list, query) {
-        if (query.isBlank()) list
-        else list.filter {
-            it.pkg.contains(query, true) || it.description.contains(query, true) ||
-                it.summary.contains(query, true)
-        }
+    var hideSystem by remember { mutableStateOf(true) }
+
+    val filtered = remember(list, query, hideSystem) {
+        list.asSequence()
+            .filter { !hideSystem || !isSystemLevel(it) }
+            .filter {
+                query.isBlank() || it.pkg.contains(query, true) ||
+                    it.description.contains(query, true) || it.summary.contains(query, true)
+            }
+            .toList()
     }
 
     NPatchScaffold(
@@ -111,52 +122,61 @@ fun RepositoryScreen(navigator: Navigator) {
         },
     ) { innerPadding ->
         Column(Modifier.fillMaxSize().padding(innerPadding)) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                placeholder = { Text("搜索模块") },
-                singleLine = true,
+            InputField(
+                query = query,
+                onQueryChange = { query = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "屏蔽系统级模块（免Root无法作用于系统）",
+                    style = COUITheme.textStyles.body2,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(checked = hideSystem, onCheckedChange = { hideSystem = it })
+            }
+            Text(
+                text = "共 ${filtered.size} 个模块",
+                style = COUITheme.textStyles.body2,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
             )
             when {
                 loading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    CircularProgressIndicator()
+                    Text("加载中…")
                 }
                 error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("加载失败", style = MiuixTheme.textStyles.body2)
-                        Text(error ?: "", style = MiuixTheme.textStyles.body2)
-                        TextButton(onClick = {
-                            scope.launch {
-                                loading = true; error = null
-                                runCatching { fetchModules() }
-                                    .onSuccess { list = it }
-                                    .onFailure { error = it.message }
-                                loading = false
-                            }
-                        }) { Text("重试") }
+                        Text("加载失败: ${error}")
+                        Text("点击重试")
                     }
                 }
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     items(filtered, key = { it.pkg }) { m ->
-                        RepoModuleItem(m)
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text(
+                                    text = m.description.ifBlank { m.pkg },
+                                    style = COUITheme.textStyles.body1,
+                                )
+                                Text(
+                                    text = m.pkg,
+                                    style = COUITheme.textStyles.body2,
+                                )
+                                if (m.authors.isNotBlank()) {
+                                    Text(
+                                        text = m.authors,
+                                        style = COUITheme.textStyles.body2,
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RepoModuleItem(m: RepoModule) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-    ) {
-        Column(Modifier.padding(12.dp)) {
-            Text(m.description.ifBlank { m.pkg }, style = MiuixTheme.textStyles.body1)
-            Text(m.pkg, style = MiuixTheme.textStyles.body2)
-            if (m.authors.isNotBlank()) {
-                Text(m.authors, style = MiuixTheme.textStyles.body2)
             }
         }
     }
