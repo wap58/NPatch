@@ -1,6 +1,7 @@
 package org.lsposed.manager.ui.compose.repository
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.*
@@ -80,6 +81,33 @@ private suspend fun fetchModules(): List<RepoModule> = withContext(Dispatchers.I
     }
 }
 
+
+private suspend fun fetchReleases(pkg: String): List<Pair<String, String>> = withContext(Dispatchers.IO) {
+    val url = "https://api.github.com/repos/Xposed-Modules-Repo/$pkg/releases?per_page=3"
+    val req = Request.Builder().url(url).header("User-Agent", "Mozilla/5.0").build()
+    http.newCall(req).execute().use { resp ->
+        val body = resp.body?.string() ?: return@withContext emptyList()
+        if (!body.trimStart().startsWith("[")) return@withContext emptyList()
+        val arr = JSONArray(body)
+        buildList {
+            for (i in 0 until minOf(3, arr.length())) {
+                val rel = arr.getJSONObject(i)
+                val tag = rel.optString("tag_name")
+                val assets = rel.optJSONArray("assets")
+                var apk = ""
+                if (assets != null) {
+                    for (j in 0 until assets.length()) {
+                        val a = assets.getJSONObject(j)
+                        val n = a.optString("name")
+                        if (n.endsWith(".apk")) { apk = a.optString("browser_download_url"); break }
+                    }
+                }
+                add(tag to apk)
+            }
+        }
+    }
+}
+
 @Composable
 fun RepositoryScreen(navigator: Navigator) {
     val hazeState = rememberHazeState()
@@ -99,6 +127,7 @@ fun RepositoryScreen(navigator: Navigator) {
     }
 
     var hideSystem by remember { mutableStateOf(true) }
+    var selected by remember { mutableStateOf<RepoModule?>(null) }
 
     val filtered = remember(list, query, hideSystem) {
         list.asSequence()
@@ -154,7 +183,8 @@ fun RepositoryScreen(navigator: Navigator) {
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     items(filtered, key = { it.pkg }) { m ->
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+                                .clickable { selected = m },
                         ) {
                             Column(Modifier.padding(12.dp)) {
                                 Text(
@@ -172,6 +202,51 @@ fun RepositoryScreen(navigator: Navigator) {
                                     )
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    // === 模块详情弹窗 ===
+    val sel = selected
+    if (sel != null) {
+        var releases by remember(sel.pkg) { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+        var relLoading by remember(sel.pkg) { mutableStateOf(true) }
+        LaunchedEffect(sel.pkg) {
+            relLoading = true
+            releases = runCatching { fetchReleases(sel.pkg) }.getOrDefault(emptyList())
+            relLoading = false
+        }
+        androidx.compose.ui.window.Dialog(onDismissRequest = { selected = null }) {
+            Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(sel.description.ifBlank { sel.pkg }, style = COUITheme.textStyles.title3)
+                    Spacer(Modifier.height(6.dp))
+                    Text(sel.pkg, style = COUITheme.textStyles.body2)
+                    if (sel.authors.isNotBlank()) {
+                        Text("作者: " + sel.authors, style = COUITheme.textStyles.body2)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    if (relLoading) {
+                        Text("正在获取版本...")
+                    } else if (releases.isEmpty()) {
+                        Text("未找到可用版本（可到 GitHub 手动下载）")
+                    } else {
+                        Text("最新版本:", style = COUITheme.textStyles.body2)
+                        Text(releases.first().first)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "下载地址已复制思路：点下方按钮复制链接到浏览器",
+                            style = COUITheme.textStyles.body2,
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        androidx.compose.material3.TextButton(onClick = { selected = null }) {
+                            Text("关闭")
                         }
                     }
                 }
