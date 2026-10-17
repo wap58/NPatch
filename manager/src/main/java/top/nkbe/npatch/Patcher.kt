@@ -129,7 +129,8 @@ object Patcher {
                 when (Configs.keyStorePreset) {
                     KeystorePreset.NPATCH -> add("-npa")
                     KeystorePreset.FPA -> add("-fpa")
-                    KeystorePreset.CUSTOM -> addAll(arrayOf("-k", MyKeyStore.file.path, Configs.keyStorePassword, Configs.keyStoreAlias, Configs.keyStoreAliasPassword))
+                    KeystorePreset.ATOM, KeystorePreset.NVWASHI, KeystorePreset.CUSTOM ->
+                        addAll(arrayOf("-k", MyKeyStore.file.path, Configs.keyStorePassword, Configs.keyStoreAlias, Configs.keyStoreAliasPassword))
                 }
                 addAll(actualApks)
             }.toTypedArray()
