@@ -20,10 +20,9 @@ import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.page.Navigator
-import io.github.suqi8.coui.kmp.basic.ScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.Text
-import io.github.suqi8.coui.kmp.basic.InputField
+import io.github.suqi8.coui.kmp.basic.TextField
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import java.util.concurrent.TimeUnit
 
@@ -84,7 +83,6 @@ private suspend fun fetchModules(): List<RepoModule> = withContext(Dispatchers.I
 @Composable
 fun RepositoryScreen(navigator: Navigator) {
     val hazeState = rememberHazeState()
-    val scrollBehavior = ScrollBehavior()
     val scope = rememberCoroutineScope()
     var list by remember { mutableStateOf<List<RepoModule>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -117,14 +115,14 @@ fun RepositoryScreen(navigator: Navigator) {
             NPatchTopAppBar(
                 title = stringResource(R.string.screen_repo),
                 hazeState = hazeState,
-                scrollBehavior = scrollBehavior,
             )
         },
     ) { innerPadding ->
         Column(Modifier.fillMaxSize().padding(innerPadding)) {
-            InputField(
-                query = query,
-                onQueryChange = { query = it },
+            TextField(
+                value = query,
+                onValueChange = { query = it },
+                label = "搜索模块",
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             )
             Row(
