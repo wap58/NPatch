@@ -691,6 +691,8 @@ object NeoPackageManager {
     }
 
     fun detectPatchedTypeDeep(appInfo: AppInfo): PatchedType {
+        // 管理器自身不是"被补丁的应用"，它的 assets 里自带 npatch 资源，必须排除
+        if (appInfo.app.packageName == lspApp.packageName) return PatchedType.NONE
         val fastType = appInfo.patchedType
         if (fastType != PatchedType.NONE) return fastType
 

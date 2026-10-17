@@ -128,6 +128,8 @@ class AppManageViewModel : ViewModel() {
     private fun loadData(silent: Boolean = false) {
         if (!silent) isRefreshing = true
         val currentList = NeoPackageManager.appList.mapNotNull { appInfo ->
+            // 排除管理器自身
+            if (appInfo.app.packageName == lspApp.packageName) return@mapNotNull null
             runCatching {
                 // 1) NPatch 打的包: 直接读 meta 里的 PatchConfig
                 val np = appInfo.app.metaData?.getString("npatch")
