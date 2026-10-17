@@ -369,8 +369,16 @@ fun AppManageBody(
                                 actions.add(stringResource(R.string.manage_module_scope) to {
                                     viewModel.viewModelScope.launch {
                                         val targetAppPkg = appInfo.app.packageName
+                                        // 原子/LSPatch 打的包：作用域读自 Android/media/<pkg>/lspatch_scope.json
+                                        // 女娲石/NPatch 打的包：读自己的数据库
+                                        val isAtomPatched = withContext(Dispatchers.IO) {
+                                            runCatching { NeoPackageManager.detectPatchedTypeDeep(appInfo) }
+                                                .getOrDefault(NeoPackageManager.PatchedType.NONE) ==
+                                                NeoPackageManager.PatchedType.ATOM
+                                        }
                                         val activated = withContext(Dispatchers.IO) {
-                                            ConfigManager.getModulesForApp(targetAppPkg).map { it.pkgName }.toSet()
+                                            if (isAtomPatched) readLspatchScope(targetAppPkg)
+                                            else ConfigManager.getModulesForApp(targetAppPkg).map { it.pkgName }.toSet()
                                         }
 
                                         val initialSelected = NeoPackageManager.appList.mapNotNull {
@@ -386,12 +394,17 @@ fun AppManageBody(
                                                     previousModules.forEach { add(it.pkgName) }
                                                     result.selected.forEach { add(it.app.packageName) }
                                                 }
-                                                previousModules.forEach {
-                                                    ConfigManager.deactivateModule(targetAppPkg, it)
-                                                }
-                                                result.selected.forEach {
-                                                    Log.d(TAG, "Activate ${it.app.packageName} for $targetAppPkg")
-                                                    ConfigManager.activateModule(targetAppPkg, LoadedModule(it.app.packageName, it.app.sourceDir))
+                                                if (isAtomPatched) {
+                                                    // 原子包：直接写 lspatch_scope.json
+                                                    writeLspatchScope(targetAppPkg, result.selected.map { it.app.packageName }.toSet())
+                                                } else {
+                                                    previousModules.forEach {
+                                                        ConfigManager.deactivateModule(targetAppPkg, it)
+                                                    }
+                                                    result.selected.forEach {
+                                                        Log.d(TAG, "Activate ${it.app.packageName} for $targetAppPkg")
+                                                        ConfigManager.activateModule(targetAppPkg, LoadedModule(it.app.packageName, it.app.sourceDir))
+                                                    }
                                                 }
                                                 if (ShizukuApi.isReady) {
                                                     // Notify both removed and newly added modules so they do not
@@ -624,3 +637,37 @@ fun AppManageFab(
         )
     }
 }
+
+/**
+ * 读取原子/LSPatch 系框架的作用域配置
+ * 路径: /storage/emulated/0/Android/media/<包名>/lspatch_scope.json
+ * 格式: {"modules": ["模块包名1", "模块包名2"]}
+ */
+private fun readLspatchScope(appPackageName: String): Set<String> = runCatching {
+    val f = java.io.File(
+        android.os.Environment.getExternalStorageDirectory(),
+        "Android/media/$appPackageName/lspatch_scope.json"
+    )
+    if (!f.isFile) return@runCatching emptySet<String>()
+    val text = f.readText()
+    val arr = org.json.JSONObject(text).optJSONArray("modules") ?: return@runCatching emptySet<String>()
+    buildSet { for (i in 0 until arr.length()) add(arr.getString(i)) }
+}.getOrDefault(emptySet())
+
+/**
+ * 写入原子/LSPatch 系框架的作用域配置
+ */
+private fun writeLspatchScope(appPackageName: String, modules: Set<String>): Boolean = runCatching {
+    val dir = java.io.File(
+        android.os.Environment.getExternalStorageDirectory(),
+        "Android/media/$appPackageName"
+    )
+    if (!dir.exists()) dir.mkdirs()
+    val f = java.io.File(dir, "lspatch_scope.json")
+    val obj = org.json.JSONObject()
+    val arr = org.json.JSONArray()
+    modules.sorted().forEach { arr.put(it) }
+    obj.put("modules", arr)
+    f.writeText(obj.toString())
+    true
+}.getOrDefault(false)
