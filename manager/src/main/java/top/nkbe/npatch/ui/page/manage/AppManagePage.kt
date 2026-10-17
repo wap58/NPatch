@@ -278,7 +278,13 @@ fun AppManageBody(
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     // 补丁来源标记（NPatch / LSPatch(原子) / FPA / 女娲石）
-                                    val srcType = appInfo.patchedType
+                                    // 快速检测失败时用深度检测（原子会把 factory 混淆成 a.b.C）
+                                    val srcType = remember(appInfo.app.packageName) {
+                                        val fast = appInfo.patchedType
+                                        if (fast != NeoPackageManager.PatchedType.NONE) fast
+                                        else runCatching { NeoPackageManager.detectPatchedTypeDeep(appInfo) }
+                                            .getOrDefault(NeoPackageManager.PatchedType.NONE)
+                                    }
                                     if (srcType != NeoPackageManager.PatchedType.NONE) {
                                         val srcLabel = when (srcType) {
                                             NeoPackageManager.PatchedType.NPATCH -> "女娲石/NPatch"
