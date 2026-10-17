@@ -129,11 +129,22 @@ class AppManageViewModel : ViewModel() {
         if (!silent) isRefreshing = true
         val currentList = NeoPackageManager.appList.mapNotNull { appInfo ->
             runCatching {
-                appInfo.app.metaData?.getString("npatch")?.let {
-                    val json = Base64.decode(it, Base64.DEFAULT).toString(Charsets.UTF_8)
+                // 1) NPatch 打的包: 直接读 meta 里的 PatchConfig
+                val np = appInfo.app.metaData?.getString("npatch")
+                if (np != null) {
+                    val json = Base64.decode(np, Base64.DEFAULT).toString(Charsets.UTF_8)
                     val config = Gson().fromJson(json, PatchConfig::class.java)
-                    if (config?.lspConfig == null) null else appInfo to config
+                    if (config?.lspConfig != null) return@runCatching (appInfo to config)
                 }
+                // 2) LSPatch(原子)/FPA 等外部框架: 深度识别后构造最小配置用于展示
+                val type = NeoPackageManager.detectPatchedTypeDeep(appInfo)
+                if (type != NeoPackageManager.PatchedType.NONE) {
+                    appInfo to PatchConfig(
+                        true, false, false, 0, 0, null,
+                        appInfo.app.appComponentFactory, false, false,
+                        appInfo.app.packageName, false, false, false, false, 0
+                    )
+                } else null
             }.getOrNull()
         }
 
