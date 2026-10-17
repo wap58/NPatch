@@ -517,6 +517,22 @@ fun AppManageBody(
                                     context.startActivity(intent)
                                 }
                             })
+                            actions.add("打开应用" to {
+                                runCatching {
+                                    val launch = context.packageManager.getLaunchIntentForPackage(appInfo.app.packageName)
+                                    if (launch != null) {
+                                        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        context.startActivity(launch)
+                                    } else {
+                                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = "package:${appInfo.app.packageName}".toUri()
+                                        }
+                                        context.startActivity(intent)
+                                    }
+                                }.onFailure {
+                                    Toast.makeText(context, "无法启动应用", Toast.LENGTH_SHORT).show()
+                                }
+                            })
                             actions.add(stringResource(R.string.manage_app_info) to {
                                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                     data = "package:${appInfo.app.packageName}".toUri()
