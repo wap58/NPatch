@@ -418,10 +418,14 @@ fun AppManageBody(
                                     }
                                 })
                             }
-                            // 分身作用域（系统分身 = 用户 999）
-                            actions.add("设置分身作用域" to {
+                            // 分身作用域（系统分身 = 用户 999）：仅当该应用真的存在于分身空间时才显示
+                            val cloneUserIdForApp = remember(appInfo.app.packageName) {
+                                findCloneUserId(appInfo.app.packageName)
+                            }
+                            if (cloneUserIdForApp != null) {
+                            actions.add("设置分身作用域（用户 $cloneUserIdForApp）" to {
                                 viewModel.viewModelScope.launch {
-                                    val scopeUserId = 999
+                                    val scopeUserId = cloneUserIdForApp
                                     val atomScope = withContext(Dispatchers.IO) { readLspatchScope(appInfo.app.packageName, scopeUserId) }
                                     val sel = NeoPackageManager.appList.mapNotNull {
                                         if (atomScope.contains(it.app.packageName)) it.app.packageName else null
@@ -438,6 +442,7 @@ fun AppManageBody(
                                     }
                                 }
                             })
+                            }
                             actions.add(stringResource(R.string.manage_export_diagnostics) to {
                                 scope.launch {
                                     runCatching {
@@ -715,3 +720,27 @@ private fun lspatchScopeFile(appPackageName: String, userId: Int): java.io.File 
     }
     return java.io.File(base, "Android/media/$appPackageName/lspatch_scope.json")
 }
+
+/**
+ * 检测某个包名是否存在于系统分身（多用户）空间，返回 userId（如 999），不存在返回 null
+ * 判断依据：/data/user/<uid>/<pkg> 或 /storage/emulated/<uid>/Android/media 无法直接读，
+ * 这里用「作用域文件所在父目录可写/存在」或 PackageManager 多用户查询兜底。
+ */
+private fun findCloneUserId(packageName: String): Int? = runCatching {
+    // 1) 尝试常见分身 userId（MIUI/ColorOS 等常见 999，其次 10、11）
+    val candidates = listOf(999, 10, 11, 12)
+    for (uid in candidates) {
+        val mediaDir = java.io.File("/storage/emulated/$uid/Android/media/$packageName")
+        if (mediaDir.exists()) return uid
+        // 有些系统分身没有 media 目录，但已安装；用 pm 查（可能无权限）
+        val ctx = lspApp
+        @Suppress("DiscouragedPrivateApi")
+        val pm = ctx.packageManager
+        val info = runCatching {
+            val m = pm.javaClass.getMethod("getPackageInfoAsUser", String::class.java, Int::class.java, Int::class.java)
+            m.invoke(pm, packageName, 0, uid)
+        }.getOrNull()
+        if (info != null) return uid
+    }
+    null
+}.getOrNull()
