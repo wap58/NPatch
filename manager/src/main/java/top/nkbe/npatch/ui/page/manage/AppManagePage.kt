@@ -277,6 +277,26 @@ fun AppManageBody(
                                 val patchColor = if (isLocal) COUITheme.colorScheme.primary else COUITheme.colorScheme.onSurfaceVariantSummary
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // 补丁来源标记（NPatch / LSPatch(原子) / FPA / 女娲石）
+                                    val srcType = appInfo.patchedType
+                                    if (srcType != NeoPackageManager.PatchedType.NONE) {
+                                        val srcLabel = when (srcType) {
+                                            NeoPackageManager.PatchedType.NPATCH -> "女娲石/NPatch"
+                                            NeoPackageManager.PatchedType.LSPATCH -> "原子/LSPatch"
+                                            NeoPackageManager.PatchedType.FPA -> "FPA"
+                                            NeoPackageManager.PatchedType.EMBEDDED -> "内嵌"
+                                            else -> ""
+                                        }
+                                        if (srcLabel.isNotEmpty()) {
+                                            Text(
+                                                text = "[$srcLabel]",
+                                                color = COUITheme.colorScheme.primary,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                        }
+                                    }
                                     val modeLabel = if (isLocal) {
                                         "${stringResource(R.string.patch_local)} ${stringResource(R.string.manage_rolling)}"
                                     } else {
