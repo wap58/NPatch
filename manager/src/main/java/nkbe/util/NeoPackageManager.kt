@@ -55,6 +55,7 @@ object NeoPackageManager {
         NPATCH("NPatch"),
         LSPATCH("LSPatch"),
         FPA("FPA"),
+        ATOM("原子"),
         EMBEDDED("Embedded APK");
     }
 
@@ -703,6 +704,8 @@ object NeoPackageManager {
         return runCatching {
             ZipFile(sourceFile).use { zip ->
                 when {
+                    // 原子框架：根目录 mo/c.json + mo/o.apk
+                    zip.getEntry("mo/c.json") != null || zip.getEntry("mo/o.apk") != null -> PatchedType.ATOM
                     zip.getEntry("assets/npatch/config.json") != null || zip.getEntry("assets/npatch/loader.bin") != null || zip.getEntry("assets/npatch/origin.apk") != null -> PatchedType.NPATCH
                     zip.getEntry("assets/lspatch/config.json") != null || zip.getEntry("assets/lspatch/loader.bin") != null || zip.getEntry("assets/lspatch/origin.apk") != null -> PatchedType.LSPATCH
                     zip.getEntry("fpa/config.json") != null || zip.getEntry("extra/core.dex") != null || zip.getEntry("fpa/source.apk") != null || zip.getEntry("fpa/o_app.apk") != null -> PatchedType.FPA

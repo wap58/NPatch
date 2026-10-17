@@ -290,6 +290,7 @@ fun AppManageBody(
                                             NeoPackageManager.PatchedType.NPATCH -> "女娲石/NPatch"
                                             NeoPackageManager.PatchedType.LSPATCH -> "原子/LSPatch"
                                             NeoPackageManager.PatchedType.FPA -> "FPA"
+                                            NeoPackageManager.PatchedType.ATOM -> "原子"
                                             NeoPackageManager.PatchedType.EMBEDDED -> "内嵌"
                                             else -> ""
                                         }
